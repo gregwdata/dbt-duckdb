@@ -64,7 +64,7 @@ FROM source_data where id <= 3
 
 class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):     
     @pytest.fixture(scope="class")
-    def models(self,base_models):
+    def models(self):
         """ Override the models test fixture with the custom one injected """ 
         # Get the original models dict
         mods = dict(BaseIncrementalOnSchemaChange.models.__wrapped__(self))
