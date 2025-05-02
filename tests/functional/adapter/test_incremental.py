@@ -29,8 +29,47 @@ class TestIncrementalUniqueKey(BaseIncrementalUniqueKey):
 class TestIncrementalPredicates(BaseIncrementalPredicates):
     pass
 
+models__incremental_append_new_columns_with_space = """
+{{
+    config(
+        materialized='incremental',
+        unique_key='id',
+        on_schema_change='append_new_columns'
+    )
+}}
+
+{% set string_type = dbt.type_string() %}
+
+WITH source_data AS (SELECT * FROM {{ ref('model_a') }} )
+
+{% if is_incremental()  %}
+
+SELECT id,
+       cast(field1 as {{string_type}}) as field1,
+       cast(field2 as {{string_type}}) as field2,
+       cast(field3 as {{string_type}}) as "field 3",
+       cast(field4 as {{string_type}}) as "field 4"
+FROM source_data WHERE id NOT IN (SELECT id from {{ this }} )
+
+{% else %}
+
+SELECT id,
+       cast(field1 as {{string_type}}) as field1,
+       cast(field2 as {{string_type}}) as field2
+FROM source_data where id <= 3
+
+{% endif %}
+"""
 
 class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):  
+    @pytest.fixture(scope="class")
+    def models(self):
+        # Get the original models dict
+        base_models = super().models()
+        # Add the custom model
+        base_models["incremental_append_new_columns_with_space"] = models__incremental_append_new_columns_with_space
+        return base_models
+        
     def run_twice_and_return_status(self, select):
         """Two runs of the specified models - return the status and message from the second"""
         run_dbt(
@@ -44,45 +83,7 @@ class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):
         return run_result.status, run_result.message
         
     
-    def test__handle_identifier_quoting_config(self, project):
-        models__incremental_append_new_columns_with_space = """
-        {{
-            config(
-                materialized='incremental',
-                unique_key='id',
-                on_schema_change='append_new_columns'
-            )
-        }}
-        
-        {% set string_type = dbt.type_string() %}
-        
-        WITH source_data AS (SELECT * FROM {{ ref('model_a') }} )
-        
-        {% if is_incremental()  %}
-        
-        SELECT id,
-               cast(field1 as {{string_type}}) as field1,
-               cast(field2 as {{string_type}}) as field2,
-               cast(field3 as {{string_type}}) as "field 3",
-               cast(field4 as {{string_type}}) as "field 4"
-        FROM source_data WHERE id NOT IN (SELECT id from {{ this }} )
-        
-        {% else %}
-        
-        SELECT id,
-               cast(field1 as {{string_type}}) as field1,
-               cast(field2 as {{string_type}}) as field2
-        FROM source_data where id <= 3
-        
-        {% endif %}
-        """
-
-        self.models.update(
-            {
-                "incremental_append_new_columns_with_space": models__incremental_append_new_columns_with_space,
-            }
-        )
-        
+    def test__handle_identifier_quoting_config(self, project):        
         project.update(
             {
                 "quoting": {"identifier": False}
