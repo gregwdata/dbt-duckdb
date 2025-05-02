@@ -76,7 +76,7 @@ class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):
         # Get the original models dict
         mods = dict(base_models)
         # Add the custom model
-        mods["incremental_append_new_columns_with_space"] = models__incremental_append_new_columns_with_space
+        mods["incremental_append_new_columns_with_space.sql"] = models__incremental_append_new_columns_with_space
         return mods
         
     def run_twice_and_return_status(self, select):
