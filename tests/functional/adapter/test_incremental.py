@@ -9,6 +9,7 @@ from dbt.tests.adapter.incremental.test_incremental_on_schema_change import (
 )
 from dbt.artifacts.schemas.results import RunStatus
 from dbt.tests.util import run_dbt
+import pytest
 
 
 class TestIncrementalUniqueKey(BaseIncrementalUniqueKey):
