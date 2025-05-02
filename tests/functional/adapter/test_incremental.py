@@ -88,7 +88,7 @@ class TestIncrementalOnSchemaChangeQuotingFalse(BaseIncrementalOnSchemaChangeSet
         )
         run_result = run_dbt(
             ["run", "--select", select], expect_pass=expect_pass_2nd_run
-        ).results[0]
+        ).results[-1]
         print(run_result)
         return run_result.status, run_result.message
 
