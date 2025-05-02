@@ -8,6 +8,7 @@ from dbt.tests.adapter.incremental.test_incremental_on_schema_change import (
     BaseIncrementalOnSchemaChange,
 )
 from dbt.artifacts.schemas.results import RunStatus
+from dbt.tests.util import run_dbt
 
 
 class TestIncrementalUniqueKey(BaseIncrementalUniqueKey):
@@ -29,5 +30,69 @@ class TestIncrementalPredicates(BaseIncrementalPredicates):
     pass
 
 
-class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):
-    pass
+class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):  
+    def run_twice_and_return_status(self, select):
+        """Two runs of the specified models - return the status and message from the second"""
+        run_dbt(
+            ["run", "--select", select, "--full-refresh"],
+            expect_pass=True,
+        )
+        run_result = run_dbt(
+            ["run", "--select", select], expect_pass=False
+        ).results[0]
+
+        return run_result.status, run_result.message
+        
+    
+    def test__handle_identifier_quoting_config(self, project):
+        models__incremental_append_new_columns_with_space = """
+        {{
+            config(
+                materialized='incremental',
+                unique_key='id',
+                on_schema_change='append_new_columns'
+            )
+        }}
+        
+        {% set string_type = dbt.type_string() %}
+        
+        WITH source_data AS (SELECT * FROM {{ ref('model_a') }} )
+        
+        {% if is_incremental()  %}
+        
+        SELECT id,
+               cast(field1 as {{string_type}}) as field1,
+               cast(field2 as {{string_type}}) as field2,
+               cast(field3 as {{string_type}}) as "field 3",
+               cast(field4 as {{string_type}}) as "field 4"
+        FROM source_data WHERE id NOT IN (SELECT id from {{ this }} )
+        
+        {% else %}
+        
+        SELECT id,
+               cast(field1 as {{string_type}}) as field1,
+               cast(field2 as {{string_type}}) as field2
+        FROM source_data where id <= 3
+        
+        {% endif %}
+        """
+
+        self.models.update(
+            {
+                "incremental_append_new_columns_with_space": models__incremental_append_new_columns_with_space,
+            }
+        )
+        
+        project.update(
+            {
+                "quoting": {"identifier": False}
+            }
+        )
+
+        # it should fail if quoting is set to false
+        (status, exc) = self.run_twice_and_return_status(
+            select="model_a incremental_append_new_columns_with_space"
+        )
+
+        assert status == RunStatus.Error
+    
