@@ -89,7 +89,7 @@ class TestIncrementalOnSchemaChangeQuotingFalse(BaseIncrementalOnSchemaChangeSet
         run_result = run_dbt(
             ["run", "--select", select], expect_pass=expect_pass_2nd_run
         ).results[0]
-
+        print(run_result)
         return run_result.status, run_result.message
 
         
@@ -104,5 +104,6 @@ class TestIncrementalOnSchemaChangeQuotingFalse(BaseIncrementalOnSchemaChangeSet
             select="model_a incremental_append_new_columns_with_space",
             expect_pass_2nd_run=False
         )
+        print(status)
         assert status == RunStatus.Error
     
