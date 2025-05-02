@@ -62,19 +62,12 @@ FROM source_data where id <= 3
 {% endif %}
 """
 
-class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):  
-    @pytest.fixture(scope="class")
-    def base_models(self, models):
-        """ 
-        Invoke models as parameter, since already defined as pytest fixture, can't call directly.
-        This makes it available in the next function to override models with a new injected model
-        """
-        return models
-    
+class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):     
     @pytest.fixture(scope="class")
     def models(self,base_models):
+        """ Override the models test fixture with the custom one injected """ 
         # Get the original models dict
-        mods = dict(base_models)
+        mods = dict(BaseIncrementalOnSchemaChange.models.__wrapped__(self))
         # Add the custom model
         mods["incremental_append_new_columns_with_space.sql"] = models__incremental_append_new_columns_with_space
         return mods
