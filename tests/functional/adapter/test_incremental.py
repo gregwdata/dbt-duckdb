@@ -6,6 +6,7 @@ from dbt.tests.adapter.incremental.test_incremental_predicates import (
 )
 from dbt.tests.adapter.incremental.test_incremental_on_schema_change import (
     BaseIncrementalOnSchemaChange,
+    BaseIncrementalOnSchemaChangeSetup
 )
 from dbt.artifacts.schemas.results import RunStatus
 from dbt.tests.util import run_dbt
@@ -29,6 +30,11 @@ class TestIncrementalUniqueKey(BaseIncrementalUniqueKey):
 
 class TestIncrementalPredicates(BaseIncrementalPredicates):
     pass
+
+
+class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):     
+    pass
+    
 
 models__incremental_append_new_columns_with_space = """
 {{
@@ -62,7 +68,8 @@ FROM source_data where id <= 3
 {% endif %}
 """
 
-class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):     
+class TestIncrementalOnSchemaChangeQuotingFalse(BaseIncrementalOnSchemaChangeSetup):     
+    """ We need a new class based on the _Setup base class to allow project config change without repeating all other tests"""
     @pytest.fixture(scope="class")
     def models(self):
         """ Override the models test fixture with the custom one injected """ 
@@ -86,15 +93,9 @@ class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):
         return run_result.status, run_result.message
 
         
-    @pytest.fixture(scope="function")
-    def project_config_update(self, request):
-        """
-        Only override quoting.identifier=False for the specific test method.
-        All other tests in this class get the default (empty) override.
-        """
-        if request.function.__name__ == "test__handle_identifier_quoting_config_false":
-            return {"quoting": {"identifier": False}}
-        return {}
+    @pytest.fixture(scope="class")
+    def project_config_update(self):
+        return {"quoting": {"identifier": False}}
         
     
     def test__handle_identifier_quoting_config_false(self, project):        
