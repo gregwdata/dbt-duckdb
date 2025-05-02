@@ -72,25 +72,36 @@ class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):
         mods["incremental_append_new_columns_with_space.sql"] = models__incremental_append_new_columns_with_space
         return mods
         
-    def run_twice_and_return_status(self, select):
+    
+    def run_twice_and_return_status(self, select, expect_pass_2nd_run):
         """Two runs of the specified models - return the status and message from the second"""
         run_dbt(
             ["run", "--select", select, "--full-refresh"],
             expect_pass=True,
         )
         run_result = run_dbt(
-            ["run", "--select", select], expect_pass=False
+            ["run", "--select", select], expect_pass=expect_pass_2nd_run
         ).results[0]
 
         return run_result.status, run_result.message
+
+        
+    @pytest.fixture(scope="function")
+    def project_config_update(self, request):
+        """
+        Only override quoting.identifier=False for the specific test method.
+        All other tests in this class get the default (empty) override.
+        """
+        if request.function.__name__ == "test__handle_identifier_quoting_config_false":
+            return {"quoting": {"identifier": False}}
+        return {}
         
     
-    def test__handle_identifier_quoting_config(self, project):        
+    def test__handle_identifier_quoting_config_false(self, project):        
         # it should fail if quoting is set to false
-        with project.config({"quoting": {"identifier": False}}):
-            (status, exc) = self.run_twice_and_return_status(
-                select="model_a incremental_append_new_columns_with_space"
-            )
-
+        (status, exc) = self.run_twice_and_return_status(
+            select="model_a incremental_append_new_columns_with_space",
+            expect_pass_2nd_run=False
+        )
         assert status == RunStatus.Error
     
