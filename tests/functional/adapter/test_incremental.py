@@ -86,16 +86,11 @@ class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):
         
     
     def test__handle_identifier_quoting_config(self, project):        
-        project.update(
-            {
-                "quoting": {"identifier": False}
-            }
-        )
-
         # it should fail if quoting is set to false
-        (status, exc) = self.run_twice_and_return_status(
-            select="model_a incremental_append_new_columns_with_space"
-        )
+        with project.config({"quoting": {"identifier": False}}):
+            (status, exc) = self.run_twice_and_return_status(
+                select="model_a incremental_append_new_columns_with_space"
+            )
 
         assert status == RunStatus.Error
     
