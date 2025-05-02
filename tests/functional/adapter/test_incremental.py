@@ -64,12 +64,20 @@ FROM source_data where id <= 3
 
 class TestIncrementalOnSchemaChange(BaseIncrementalOnSchemaChange):  
     @pytest.fixture(scope="class")
-    def models(self):
+    def base_models(self, models):
+        """ 
+        Invoke models as parameter, since already defined as pytest fixture, can't call directly.
+        This makes it available in the next function to override models with a new injected model
+        """
+        return models
+    
+    @pytest.fixture(scope="class")
+    def models(self,base_models):
         # Get the original models dict
-        base_models = super().models()
+        mods = dict(base_models)
         # Add the custom model
-        base_models["incremental_append_new_columns_with_space"] = models__incremental_append_new_columns_with_space
-        return base_models
+        mods["incremental_append_new_columns_with_space"] = models__incremental_append_new_columns_with_space
+        return mods
         
     def run_twice_and_return_status(self, select):
         """Two runs of the specified models - return the status and message from the second"""
